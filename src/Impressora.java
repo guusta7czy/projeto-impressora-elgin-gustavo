@@ -1,4 +1,15 @@
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 public class Impressora {
+    private static final String ASS_QRCODE_CANCELAMENTO =
+            "Q5DLkpdRijIRGY6YSSNsTWK1TztHL1vD0V1Jc4spo/CEUqICEb9SFy82ym8EhBRZjbh3btsZhF+sjHqEMR159i4agru9x6KsepK/q0"
+            + "E2e5xlU5cv3m1woYfgHyOkWDNcSdMsS6bBh2Bpq6s89yJ9Q6qh/J8YHi306ce9Tqb/drKvN2XdE5noRSS32TAWuaQEVd7u+TrvXlOQ"
+            + "sE3fHR1D5f1saUwQLPSdIv01NF6Ny7jZwjCwv1uNDgGZONJdlTJ6p0ccqnZvuE70aHOI09elpjEO6Cd+orI7XHHrFCwhFhAcbalc+Z"
+            + "fO5b/+vkyAHS6CYVFCDtYR9Hi5qgdk31v23w==";
+
     private int tipo = 1;
     private String modelo = "i9";
     private String conexao = "USB";
@@ -92,6 +103,55 @@ public class Impressora {
         cortarPapel();
     }
 
+    public void imprimirXMLSAT(String caminhoArquivo) {
+        if (!verificarConexao()) return;
+        String xml = lerArquivo(caminhoArquivo);
+        if (xml == null) return;
+
+        int retorno = ImpressoraDLL.INSTANCE.ImprimeXMLSAT(xml, 0);
+        mostrarResultado("Cupom SAT impresso!", "Erro ao imprimir o XML SAT.", retorno);
+        cortarPapel();
+    }
+
+    public void imprimirXMLCancelamentoSAT(String caminhoArquivo) {
+        if (!verificarConexao()) return;
+        String xml = lerArquivo(caminhoArquivo);
+        if (xml == null) return;
+
+        int retorno = ImpressoraDLL.INSTANCE.ImprimeXMLCancelamentoSAT(xml, ASS_QRCODE_CANCELAMENTO, 0);
+        mostrarResultado("Cupom de cancelamento impresso!", "Erro ao imprimir o cancelamento SAT.", retorno);
+        cortarPapel();
+    }
+
+    public void abrirGaveta() {
+        if (!verificarConexao()) return;
+        int retorno = ImpressoraDLL.INSTANCE.AbreGaveta(1, 5, 10);
+        mostrarResultado("Gaveta aberta!", "Erro ao abrir a gaveta.", retorno);
+    }
+
+    public void sinalSonoro(int quantidade) {
+        if (!verificarConexao()) return;
+        int retorno = ImpressoraDLL.INSTANCE.SinalSonoro(quantidade, 50, 5);
+        mostrarResultado("Bip!", "Erro no sinal sonoro.", retorno);
+    }
+
+    public void avancarPapel(int linhas) {
+        if (!verificarConexao()) return;
+        int retorno = ImpressoraDLL.INSTANCE.AvancaPapel(linhas);
+        mostrarResultado("Papel avançado " + linhas + " linha(s).", "Erro ao avançar o papel.", retorno);
+    }
+
+    public void verStatusPapel() {
+        if (!verificarConexao()) return;
+        int retorno = ImpressoraDLL.INSTANCE.StatusImpressora(3);
+        switch (retorno) {
+            case 5 -> System.out.println("Status: a impressora tem papel.");
+            case 6 -> System.out.println("Status: o papel está acabando.");
+            case 7 -> System.out.println("Status: sem papel!");
+            default -> System.out.println("Não foi possível ler o status do papel. Código: " + retorno);
+        }
+    }
+
     private void mostrarResultado(String sucesso, String erro, int retorno) {
         if (retorno == 0) {
             System.out.println(sucesso);
@@ -104,6 +164,16 @@ public class Impressora {
         int retorno = ImpressoraDLL.INSTANCE.Corte(5);
         if (retorno != 0) {
             System.out.println("Aviso: não foi possível cortar o papel. Código: " + retorno);
+        }
+    }
+
+    private String lerArquivo(String caminho) {
+        Path arquivo = Paths.get(caminho);
+        try {
+            return Files.readString(arquivo);
+        } catch (IOException e) {
+            System.out.println("Arquivo não encontrado: " + arquivo.toAbsolutePath());
+            return null;
         }
     }
 }
